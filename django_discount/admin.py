@@ -5,4 +5,4 @@ from .models import Discount
 
 @admin.register(Discount)
 class DiscountAdmin(admin.ModelAdmin):
-    date_hierarchy = 'updated_at'
+    list_display = ['id', 'title', 'code', 'value', 'type']

@@ -4,7 +4,7 @@ import datetime
 from django.db import models
 from django.contrib.auth import get_user_model
 # from django.utils.translation import ugettext as _
-from django.contrib.postgres.fields import ArrayField
+# from django.contrib.postgres.fields import ArrayField
 
 from .utils import price_beautifier
 from .consts import *
@@ -196,65 +196,65 @@ class Discount(models.Model):
         return False, 'کد تخفیف برای این آیتم تعریف نشده است.'
 
 
-class DiscountItem(models.Model):
-    """ Model will hold items and their list of item IDs.
-    So whenever we want to validate a discount code on an item,
-    Will check it's type and id with this model. """
-    discount = models.ForeignKey(
-        Discount,
-        on_delete=models.CASCADE,
-        related_name='items'
-    )
-    type = models.CharField(
-        choices=DISCOUNT_ITEM_TYPES,
-        default='hotel', max_length=10,
-        verbose_name='نوع آیتمی که کد می‌تواند بر روی آن اعمال شود.'
-    )
-    id_list = ArrayField(
-        models.IntegerField(null=True, blank=True), default=list, blank=True,
-        verbose_name='لیست آی‌دی‌های این نوع آیتم که بر روی آن‌ها قابل اعمال است.',
-        help_text='در صورتی که خالی باشد بر روی تمامی آیتم‌های این نوع قابل استفاده است.'
-    )
-
-    def __str__(self):
-        return '{} {}'.format(
-            self.get_type_display(),
-            self.discount.__str__()
-        )
-
-    class Meta:
-        db_table = 'discount_item'
-        verbose_name_plural = 'آیتم‌های کد تخفیف'
-
-    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
-        """
-        if discount not exist will be added but if discount and type exist will be update this discount id
-        :param force_insert:
-        :param force_update:
-        :param using:
-        :param update_fields:
-        :return:
-        """
-        if not self.pk:
-            dis_val = DiscountItem.objects.filter(
-                discount=self.discount,
-                type=self.type
-            )
-            if len(dis_val) > 0:
-                DiscountItem.objects.filter(id=dis_val[0].id).update(id_list=self.id_list)
-                return "update:{}".format(dis_val[0])
-            # raise ValueError('این نوع آیتم قبلا تعریف شده است.')
-            # super(DiscountItem,self).update()
-            else:
-                super(DiscountItem, self).save()
-        # super(DiscountItem, self).save()
-
-
-class UsedDiscount(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='discounts')
-    discount = models.ForeignKey(Discount, on_delete=models.CASCADE)
-    item_type = models.CharField(choices=DISCOUNT_ITEM_TYPES, default='hotel', max_length=10)
-    item_id = models.IntegerField(null=True, blank=True)
-
-    def __str__(self):
-        return "{},{}".format(self.discount.title, self.item_id)
+# class DiscountItem(models.Model):
+#     """ Model will hold items and their list of item IDs.
+#     So whenever we want to validate a discount code on an item,
+#     Will check it's type and id with this model. """
+#     discount = models.ForeignKey(
+#         Discount,
+#         on_delete=models.CASCADE,
+#         related_name='items'
+#     )
+#     type = models.CharField(
+#         choices=DISCOUNT_ITEM_TYPES,
+#         default='hotel', max_length=10,
+#         verbose_name='نوع آیتمی که کد می‌تواند بر روی آن اعمال شود.'
+#     )
+#     id_list = ArrayField(
+#         models.IntegerField(null=True, blank=True), default=list, blank=True,
+#         verbose_name='لیست آی‌دی‌های این نوع آیتم که بر روی آن‌ها قابل اعمال است.',
+#         help_text='در صورتی که خالی باشد بر روی تمامی آیتم‌های این نوع قابل استفاده است.'
+#     )
+#
+#     def __str__(self):
+#         return '{} {}'.format(
+#             self.get_type_display(),
+#             self.discount.__str__()
+#         )
+#
+#     class Meta:
+#         db_table = 'discount_item'
+#         verbose_name_plural = 'آیتم‌های کد تخفیف'
+#
+#     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+#         """
+#         if discount not exist will be added but if discount and type exist will be update this discount id
+#         :param force_insert:
+#         :param force_update:
+#         :param using:
+#         :param update_fields:
+#         :return:
+#         """
+#         if not self.pk:
+#             dis_val = DiscountItem.objects.filter(
+#                 discount=self.discount,
+#                 type=self.type
+#             )
+#             if len(dis_val) > 0:
+#                 DiscountItem.objects.filter(id=dis_val[0].id).update(id_list=self.id_list)
+#                 return "update:{}".format(dis_val[0])
+#             # raise ValueError('این نوع آیتم قبلا تعریف شده است.')
+#             # super(DiscountItem,self).update()
+#             else:
+#                 super(DiscountItem, self).save()
+#         # super(DiscountItem, self).save()
+#
+#
+# class UsedDiscount(models.Model):
+#     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='discounts')
+#     discount = models.ForeignKey(Discount, on_delete=models.CASCADE)
+#     item_type = models.CharField(choices=DISCOUNT_ITEM_TYPES, default='hotel', max_length=10)
+#     item_id = models.IntegerField(null=True, blank=True)
+#
+#     def __str__(self):
+#         return "{},{}".format(self.discount.title, self.item_id)
