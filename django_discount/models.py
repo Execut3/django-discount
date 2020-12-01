@@ -3,11 +3,11 @@ import datetime
 
 from django.db import models
 from django.contrib.auth import get_user_model
-# from django.utils.translation import ugettext as _
-# from django.contrib.postgres.fields import ArrayField
+from django.utils.translation import ugettext as _
 
-from .utils import price_beautifier
 from .consts import *
+from .settings import *
+from .utils import price_beautifier
 
 User = get_user_model()
 
@@ -22,7 +22,7 @@ class DiscountManager(models.Manager):
         # First check if this discount item do exist
         discount = self.filter(code=code).prefetch_related('items').first()
         if not discount:
-            return False, 0, 'کد تخفیف نامعتبر است.'
+            return False, 0, _('Discount code is not valid.')
 
         is_available, msg = discount.is_available(user_id)
         if not is_available:
@@ -48,23 +48,23 @@ class DiscountManager(models.Manager):
 class Discount(models.Model):
     title = models.CharField(
         max_length=100,
-        verbose_name='عنوان کد تخفیف'
+        verbose_name=_('Title')
     )
     code = models.CharField(
         max_length=20,
-        verbose_name='کد تخفیف'
+        verbose_name=_('Code')
     )
 
     # Discount amount to apply
     type = models.CharField(
         choices=DISCOUNT_TYPES,
-        verbose_name='نوع تخفیف',
+        verbose_name=_('Discount type'),
         max_length=10,
         default='percent'
     )
     value = models.PositiveIntegerField(
         default=0,
-        verbose_name='میزان تخفیف'
+        verbose_name=_('Discount value')
     )
 
     # Limitations
@@ -96,7 +96,8 @@ class Discount(models.Model):
         help_text='در صورت خالی بودن زمان شروع حال در نظر گرفته می‌شود.'
     )
     expire_date = models.DateTimeField(
-        null=True, blank=True, verbose_name='زمان پایان اعتبار کد تخفیف',
+        null=True, blank=True,
+        verbose_name='زمان پایان اعتبار کد تخفیف',
         help_text='در صورتی که خالی تعریف شد، کد تخفیف منقضی نخواهد شد.'
     )
 
@@ -120,19 +121,23 @@ class Discount(models.Model):
 
     class Meta:
         db_table = 'discount'
-        verbose_name = 'کد تخفیف'
+        verbose_name = _('Discount')
 
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+        # If no start date, set it to current datetime now()
         if not self.start_date:
             self.start_date = datetime.datetime.now()
+
+        # If no expire_date, set DISCOUNT_DEFAULT_DURATION days from now
         if not self.expire_date:
-            self.expire_date = self.start_date + datetime.timedelta(days=30)
+            self.expire_date = self.start_date + datetime.timedelta(days=DISCOUNT_DEFAULT_DURATION)
+
         if self.expire_date <= self.start_date:
-            raise ValueError('زمان انقضای کد تخفیف نمی‌تواند بیش‌تر از زمان شروع آن باشد.')
+            raise ValueError(_('Expire date can\'t be before Start Date of discount.'))
 
         if not self.pk:
             if Discount.objects.filter(code=self.code).exists():
-                raise ValueError('این کد قبلا تعریف شده است.')
+                raise ValueError(_('This code already exists'))
 
         # In percent type, value should be between 0 and 100
         if self.type == 'percent':
@@ -145,6 +150,7 @@ class Discount(models.Model):
         if not self.is_active:
             msg = 'کد تخفیف فعال نیست.'
             return False, msg
+
         if self.total_uses >= self.total_max_uses:
             msg = 'کد تخفیف منقضی شده است.'
             self.deactivate(msg, True)
@@ -158,16 +164,16 @@ class Discount(models.Model):
             self.deactivate(msg, True)
             return False, msg
 
-        # Now check if user is already used this discount code or not!
-        # if count bigger than max usage it ignore system
-        if user_id:
-            count_discount = UsedDiscount.objects.filter(user_id=user_id, discount_id=self.id).count()
-            if count_discount >= self.total_max_uses:
-                msg = 'شما از این کد تخفیف {} استفاده کرده‌اید واین حدکثر تعداد مجاز برای شماست.'.format(count_discount)
-                return False, msg
-            # if UsedDiscount.objects.filter(user_id=user_id, discount=self):
-            #     msg = 'شما قبلا از این کد تخفیف استفاده کرده‌اید.'
-            #     return False, msg
+        # # Now check if user is already used this discount code or not!
+        # # if count bigger than max usage it ignore system
+        # if user_id:
+        #     count_discount = UsedDiscount.objects.filter(user_id=user_id, discount_id=self.id).count()
+        #     if count_discount >= self.total_max_uses:
+        #         msg = 'شما از این کد تخفیف {} استفاده کرده‌اید واین حدکثر تعداد مجاز برای شماست.'.format(count_discount)
+        #         return False, msg
+        #     # if UsedDiscount.objects.filter(user_id=user_id, discount=self):
+        #     #     msg = 'شما قبلا از این کد تخفیف استفاده کرده‌اید.'
+        #     #     return False, msg
         return True, ''
 
     def deactivate(self, msg='', commit=True):
