@@ -101,6 +101,13 @@ class Discount(models.Model):
         help_text='در صورتی که خالی تعریف شد، کد تخفیف منقضی نخواهد شد.'
     )
 
+    # Extra Attributes
+    case_sensitive = models.BooleanField(
+        default=True,
+        verbose_name=_('Case Sensitive')
+    )
+
+    # Accessibility Attributes
     is_active = models.BooleanField(
         default=True,
         verbose_name='وضعیت فعال بودن کد تخفیف'
@@ -121,7 +128,8 @@ class Discount(models.Model):
 
     class Meta:
         db_table = 'discount'
-        verbose_name = _('Discount')
+        verbose_name = 'Discount'
+        verbose_name_plural = _('Discount')
 
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
         # If no start date, set it to current datetime now()
@@ -254,13 +262,50 @@ class Discount(models.Model):
 #             else:
 #                 super(DiscountItem, self).save()
 #         # super(DiscountItem, self).save()
-#
-#
-# class UsedDiscount(models.Model):
-#     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='discounts')
-#     discount = models.ForeignKey(Discount, on_delete=models.CASCADE)
-#     item_type = models.CharField(choices=DISCOUNT_ITEM_TYPES, default='hotel', max_length=10)
-#     item_id = models.IntegerField(null=True, blank=True)
-#
-#     def __str__(self):
-#         return "{},{}".format(self.discount.title, self.item_id)
+
+
+class UsedDiscount(models.Model):
+    """ Whenever a user try to use a discount code,
+    And purchase or own that item, it's better to keep
+    record of that purchase in this model for later reports.
+    """
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='discounts',
+        verbose_name=_('User who used discount code')
+    )
+    discount = models.ForeignKey(
+        Discount, null=False,
+        related_name='usages',
+        on_delete=models.CASCADE,
+        verbose_name=_('Discount')
+    )
+    code = models.CharField(
+        null=True, blank=True, max_length=20,
+        verbose_name='Code used in that moment'
+    )
+    item_type = models.CharField(
+        max_length=10,
+        default='hotel',
+        choices=DISCOUNT_ITEM_TYPES,
+        verbose_name=_('Item type which user is trying to purchase or own'),
+    )
+    item_id = models.IntegerField(
+        null=True, blank=True,
+        verbose_name=_('Type of item to purchase or own')
+    )
+
+    def __str__(self):
+        return "{},{}".format(self.discount.title, self.item_id)
+
+    class Meta:
+        db_table = 'discount_used_record'
+        verbose_name = 'Used Discount'
+        verbose_name_plural = _('Used Discount')
+
+    def save(self, force_insert=False, force_update=False, using=None,
+             update_fields=None):
+        if not self.code:
+            self.code = self.discount.code
+        super(UsedDiscount, self).save()
