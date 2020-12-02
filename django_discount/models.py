@@ -5,19 +5,24 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils.translation import ugettext as _
 
+from .utils import *
 from .consts import *
 from .settings import *
-from .utils import price_beautifier
 
 User = get_user_model()
 
 
 class DiscountManager(models.Manager):
 
-    def check_code(self, code, item_type, item_id, user_id, amount=None):
-        """ Will check code, and find proper discount for it, then will do some validations
-        if this code is valid for this user and this item or not. Then will calculate
-        total discount for amount of transaction."""
+    def check_code(self, code, user_id, amount=None, **kwargs):
+        """ Will check code, and find proper discount for it,
+        then will do some validations if this code is valid for
+        this user and this item or not. Then will calculate total
+        discount for amount of transaction.
+
+        :arg amount:    if amount set, we should calc discount based on it,
+                        for percent and calculation better to send amount value
+        """
 
         # First check if this discount item do exist
         discount = self.filter(code=code).prefetch_related('items').first()
@@ -28,21 +33,20 @@ class DiscountManager(models.Manager):
         if not is_available:
             return False, 0, msg
 
-        # Now verify if the item_type and item_id items do exist in list if DiscountItems
-        status, msg = discount.check_if_item_allowed(item_type, item_id)
-        if not status:
-            return False, 0, msg
+        # # Now verify if the item_type and item_id items do exist in list if DiscountItems
+        # status, msg = discount.check_if_item_allowed(item_type, item_id)
+        # if not status:
+        #     return False, 0, msg
 
         discount_amount = 0
         if amount:
-            # If amount not provided, means we are just checking if code is valid or not!
             if amount < discount.min_invoice_amount:
                 return False, 0, 'حداقل میزان تراکنش برای اعمال این کد تخفیف {} تومان است.'.format(
                     price_beautifier(discount.min_invoice_amount)
                 )
 
             discount_amount = discount.calc_discount(amount)
-        return True, discount_amount, 'معتبر است.'
+        return True, discount_amount, _('it is valid.')
 
 
 class Discount(models.Model):
@@ -91,11 +95,15 @@ class Discount(models.Model):
     )
 
     # Usage Parameters
-    total_max_uses = models.IntegerField(
+    usage_limit = models.IntegerField(
         default=50,
         verbose_name='حداکثر تعداد دفعاتی که این کد تخفیف قابل استفاده است.'
     )
-    total_uses = models.IntegerField(
+    usage_limit_per_user = models.IntegerField(
+        default=1,
+        verbose_name=_('Maximum usage for each user')
+    )
+    total_usages = models.IntegerField(
         default=0,
         verbose_name='تعداد دفعات استفاده شده'
     )
@@ -184,33 +192,50 @@ class Discount(models.Model):
         super(Discount, self).save()
 
     def is_available(self, user_id=None):
+        """ This method will check if discount is valid to be used or not.
+        It will do the followings:
+
+        - Check activation of discount
+        - check if total usages is not greater and usage-limit
+        - check if started and not expired yet
+        - if user_id provided, check if this user allowed to use it or not
+        """
         if not self.is_active:
-            msg = 'کد تخفیف فعال نیست.'
+            msg = _('Discount code is not active.')
             return False, msg
 
-        if self.total_uses >= self.total_max_uses:
-            msg = 'کد تخفیف منقضی شده است.'
+        if self.total_usages >= self.usage_limit:
+            msg = _('Discount code is expired.')
             self.deactivate(msg, True)
             return False,
+
         now = datetime.datetime.now()
         if now < self.start_date:
-            msg = 'مهلت استفاده از کد تخفیف هنوز شروع نشده است.'
+            msg = _('Time to use discount code is not started yet!')
             return False, msg
+
         if now > self.expire_date:
-            msg = 'کد تخفیف منقضی شده است.'
+            msg = _('Discount code is expired.')
             self.deactivate(msg, True)
             return False, msg
 
         # Now check if user is already used this discount code or not!
         # if count bigger than max usage it ignore system
         if user_id:
-            count_discount = UsedDiscount.objects.filter(user_id=user_id, discount_id=self.id).count()
-            if count_discount >= self.total_max_uses:
+            # First check if self.user is valid
+            if self.user:
+                if user_id != self.user_id:
+                    return False, _('User is not valid.')
+
+            # Now check if user already used it or not!
+            count_discount = UsedDiscount.objects.filter(
+                user_id=user_id,
+                discount_id=self.id
+            ).count()
+            if count_discount >= self.usage_limit_per_user:
                 msg = 'شما از این کد تخفیف {} استفاده کرده‌اید واین حدکثر تعداد مجاز برای شماست.'.format(count_discount)
                 return False, msg
-            # if UsedDiscount.objects.filter(user_id=user_id, discount=self):
-            #     msg = 'شما قبلا از این کد تخفیف استفاده کرده‌اید.'
-            #     return False, msg
+
         return True, ''
 
     def deactivate(self, msg='', commit=True):
@@ -228,15 +253,17 @@ class Discount(models.Model):
             discount = self.value
         if discount > self.max_amount:
             discount = self.max_amount
+        if discount < 0:
+            discount = 0
         return discount
 
-    def check_if_item_allowed(self, item_type, item_id):
-        item = self.items.filter(type=item_type).first()
-        if not item:
-            return False, 'کد تخفیف برای این آیتم تعریف نشده است.'
-        if not item.id_list or item_id in item.id_list:
-            return True, ''
-        return False, 'کد تخفیف برای این آیتم تعریف نشده است.'
+    # def check_if_item_allowed(self, item_type, item_id):
+    #     item = self.items.filter(type=item_type).first()
+    #     if not item:
+    #         return False, 'کد تخفیف برای این آیتم تعریف نشده است.'
+    #     if not item.id_list or item_id in item.id_list:
+    #         return True, ''
+    #     return False, 'کد تخفیف برای این آیتم تعریف نشده است.'
 
 
 # class DiscountItem(models.Model):
