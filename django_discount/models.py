@@ -46,21 +46,32 @@ class DiscountManager(models.Manager):
 
 
 class Discount(models.Model):
+    user = models.ForeignKey(
+        User,
+        null=True, blank=True,
+        on_delete=models.CASCADE,
+        related_name='discounts',
+        verbose_name=_('Specific user to use this discount'),
+        help_text=_('When empty discount will be used for everyone and should not be any duplicates. '
+                    'But if User set it can have discount\'s with different users and duplicate codes. '
+                    'And that specific discount will only be available for that user.')
+    )
     title = models.CharField(
         max_length=100,
         verbose_name=_('Title')
     )
     code = models.CharField(
         max_length=20,
+        db_index=True,
         verbose_name=_('Code')
     )
 
     # Discount amount to apply
     type = models.CharField(
+        max_length=10,
+        default='percent',
         choices=DISCOUNT_TYPES,
         verbose_name=_('Discount type'),
-        max_length=10,
-        default='percent'
     )
     value = models.PositiveIntegerField(
         default=0,
@@ -69,8 +80,8 @@ class Discount(models.Model):
 
     # Limitations
     min_invoice_amount = models.IntegerField(
-        verbose_name='حداقل مبلغ فاکتور برای اعمال تخفیف',
         default=10000,
+        verbose_name='حداقل مبلغ فاکتور برای اعمال تخفیف',
     )
     max_amount = models.IntegerField(
         default=100000,
@@ -88,6 +99,14 @@ class Discount(models.Model):
         default=0,
         verbose_name='تعداد دفعات استفاده شده'
     )
+    # included_items = models.TextField(
+    #     default='', verbose_name=_('Included Items'),
+    #     help_text=_('If empty, will be applied on all items')
+    # )       # include_items sample:     [{'type': 0, 'id': 1}, ...] as string
+    # excluded_items = models.TextField(
+    #     default='', verbose_name=_('Excluded Items'),
+    #     help_text=_('If empty, will not exclude any item')
+    # )       # excluded_items sample:    [{'type': 0, 'id': 1}, ...] as string
 
     # Date attributes
     start_date = models.DateTimeField(
@@ -113,12 +132,14 @@ class Discount(models.Model):
         verbose_name='وضعیت فعال بودن کد تخفیف'
     )
     not_active_reason = models.CharField(
-        max_length=100, default='',
+        default='',
+        max_length=100,
         verbose_name='علت غیرفعال بودن', blank=True
     )
     is_deleted = models.BooleanField(
         default=False,
-        verbose_name="حذف شد"
+        db_index=True,
+        verbose_name="حذف شد",
     )
 
     objects = DiscountManager()
@@ -138,14 +159,22 @@ class Discount(models.Model):
 
         # If no expire_date, set DISCOUNT_DEFAULT_DURATION days from now
         if not self.expire_date:
-            self.expire_date = self.start_date + datetime.timedelta(days=DISCOUNT_DEFAULT_DURATION)
+            d = datetime.timedelta(days=DISCOUNT_DEFAULT_DURATION)
+            self.expire_date = self.start_date + d
 
         if self.expire_date <= self.start_date:
             raise ValueError(_('Expire date can\'t be before Start Date of discount.'))
 
+        # Here will check for duplicates scenarios
         if not self.pk:
-            if Discount.objects.filter(code=self.code).exists():
-                raise ValueError(_('This code already exists'))
+            if self.user:
+                # Only one instance with user=self.user and same code should exist
+                if Discount.objects.filter(code=self.code, user=self.user).exists():
+                    raise ValueError(_('This code already exist for this user.'))
+            else:
+                # There should not be any other instance without user and same code
+                if Discount.objects.filter(code=self.code, user__isnull=True).exists():
+                    raise ValueError(_('This code already exists'))
 
         # In percent type, value should be between 0 and 100
         if self.type == 'percent':
@@ -172,16 +201,16 @@ class Discount(models.Model):
             self.deactivate(msg, True)
             return False, msg
 
-        # # Now check if user is already used this discount code or not!
-        # # if count bigger than max usage it ignore system
-        # if user_id:
-        #     count_discount = UsedDiscount.objects.filter(user_id=user_id, discount_id=self.id).count()
-        #     if count_discount >= self.total_max_uses:
-        #         msg = 'شما از این کد تخفیف {} استفاده کرده‌اید واین حدکثر تعداد مجاز برای شماست.'.format(count_discount)
-        #         return False, msg
-        #     # if UsedDiscount.objects.filter(user_id=user_id, discount=self):
-        #     #     msg = 'شما قبلا از این کد تخفیف استفاده کرده‌اید.'
-        #     #     return False, msg
+        # Now check if user is already used this discount code or not!
+        # if count bigger than max usage it ignore system
+        if user_id:
+            count_discount = UsedDiscount.objects.filter(user_id=user_id, discount_id=self.id).count()
+            if count_discount >= self.total_max_uses:
+                msg = 'شما از این کد تخفیف {} استفاده کرده‌اید واین حدکثر تعداد مجاز برای شماست.'.format(count_discount)
+                return False, msg
+            # if UsedDiscount.objects.filter(user_id=user_id, discount=self):
+            #     msg = 'شما قبلا از این کد تخفیف استفاده کرده‌اید.'
+            #     return False, msg
         return True, ''
 
     def deactivate(self, msg='', commit=True):
@@ -272,7 +301,7 @@ class UsedDiscount(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='discounts',
+        related_name='used_discounts',
         verbose_name=_('User who used discount code')
     )
     discount = models.ForeignKey(
