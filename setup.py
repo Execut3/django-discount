@@ -6,7 +6,7 @@ README = open(os.path.join(here, 'README.md')).read()
 
 setup(
     name='django-discount',
-    version='0.0.2',
+    version='0.0.3',
     packages=['django_discount'],
     description='A Django App for handling creating dynamic discount system.',
     long_description=README,

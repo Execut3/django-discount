@@ -25,7 +25,8 @@ class DiscountManager(models.Manager):
         """
 
         # First check if this discount item do exist
-        discount = self.filter(code=code).prefetch_related('items').first()
+        # discount = self.filter(code=code).prefetch_related('items').first()
+        discount = self.filter(code=code).first()
         if not discount:
             return False, 0, _('Discount code is not valid.')
 
