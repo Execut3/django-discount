@@ -6,7 +6,7 @@ README = open(os.path.join(here, 'README.md')).read()
 
 setup(
     name='django-discount',
-    version='0.0.1',
+    version='0.0.2',
     packages=['django_discount'],
     description='A Django App for handling creating dynamic discount system.',
     long_description=README,
@@ -16,7 +16,7 @@ setup(
     url='https://github.com/Execut3/django-discount',
     license='GPT',
     install_requires=[
-        'Django>=2.0',
+        'Django>=2.0'
     ],
     include_package_data=True,
 )

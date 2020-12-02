@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-12-02 05:53+0330\n"
+"POT-Creation-Date: 2020-12-02 06:13+0330\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -68,7 +68,7 @@ msgstr "حساب به حروف بزرگ و کوچک"
 
 #: models.py:161 models.py:338
 msgid "Discount"
-msgstr "نوع تخفیف"
+msgstr "کد تخفیف"
 
 #: models.py:174
 msgid "Expire date can't be before Start Date of discount."
