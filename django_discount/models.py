@@ -165,7 +165,7 @@ class Discount(models.Model):
         if self.expire_date <= self.start_date:
             raise ValueError(_('Expire date can\'t be before Start Date of discount.'))
 
-        # Here will check for duplicates scenarios
+        # Here will check for duplicate scenarios
         if not self.pk:
             if self.user:
                 # Only one instance with user=self.user and same code should exist
@@ -179,7 +179,7 @@ class Discount(models.Model):
         # In percent type, value should be between 0 and 100
         if self.type == 'percent':
             if not 0 <= self.value <= 100:
-                raise ValueError('مقدار باید بین ۰ تا ۱۰۰ باشد.')
+                raise ValueError(_('Value should be between 0 and 100 for percent type.'))
 
         super(Discount, self).save()
 

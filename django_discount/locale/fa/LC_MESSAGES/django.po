@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-12-01 16:22+0330\n"
+"POT-Creation-Date: 2020-12-02 05:34+0330\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -22,32 +22,72 @@ msgstr ""
 msgid "Discount code is not valid."
 msgstr "کد تخفیف معتبر نیست."
 
-#: models.py:51
+#: models.py:54
+msgid "Specific user to use this discount"
+msgstr "کاربری که تنها می‌تواند از این کد تخفیف استفاده کند."
+
+#: models.py:55
+msgid ""
+"When empty discount will be used for everyone and should not be any "
+"duplicates. But if User set it can have discount's with different users and "
+"duplicate codes. And that specific discount will only be available for that "
+"user."
+msgstr "در صورتی که خالی باشد، این کد تخفیف می‌تواند برای همه استفاده شود و حتما باید دقت شود که این کد تکراری نباشد. ولی در صورتی که کاربری انتخاب شده باشد، می‌توان با همین کد برای کاربرهای مختلف با مقادیر مختلف کد تخفیف صادر کرد. و آن کد تخفیف با آن مقدار تنها برای آن کاربر در دسترس خواهد بود."
+
+#: models.py:61
 msgid "Title"
 msgstr "عنوان"
 
-#: models.py:55
+#: models.py:66
 msgid "Code"
 msgstr "کد تخفیف"
 
-#: models.py:61
+#: models.py:74
 msgid "Discount type"
 msgstr "نوع تخفیف"
 
-#: models.py:67
+#: models.py:78
 msgid "Discount value"
 msgstr "میزان تخفیف"
 
-#: models.py:124
-#, fuzzy
-#| msgid "Discount type"
+#: models.py:126
+msgid "Case Sensitive"
+msgstr "حساب به حروف بزرگ و کوچک"
+
+#: models.py:153 models.py:311
 msgid "Discount"
 msgstr "نوع تخفیف"
 
-#: models.py:136
+#: models.py:166
 msgid "Expire date can't be before Start Date of discount."
 msgstr "زمان انقضای کد تخفیف نمی‌تواند قبل از تاریخ شروع اعتبار آن باشد."
 
-#: models.py:140
+#: models.py:173
+#, fuzzy
+#| msgid "This code already exists"
+msgid "This code already exist for this user."
+msgstr "کد تخفیف موجود می‌باشد."
+
+#: models.py:177
 msgid "This code already exists"
 msgstr "کد تخفیف موجود می‌باشد."
+
+#: models.py:182
+msgid "Value should be between 0 and 100 for percent type."
+msgstr "مقدار باید بین ۰ تا ۱۰۰ باشد در حالت درصدی"
+
+#: models.py:305
+msgid "User who used discount code"
+msgstr "کاربری که از این کد تخفیف استفاده کرده است."
+
+#: models.py:321
+msgid "Item type which user is trying to purchase or own"
+msgstr "نوع آیتمی که کاربر تمایل به خرید یا مالکیت دارد."
+
+#: models.py:325
+msgid "Type of item to purchase or own"
+msgstr "نوع آیتم برای خرید"
+
+#: models.py:334
+msgid "Used Discount"
+msgstr "نوع تخفیف"
